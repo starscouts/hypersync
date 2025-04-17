@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+import os
+import socket
+
+VERSION = "1.00"
+
+import getpass
+import subprocess
+
+tracked = {
+    "/Users/raindrops": [
+        ".tcshrc", ".bash_profile", ".config/fish", ".config/gh", ".config/gpt4all.io", ".config/helix", ".config/htop",
+        ".config/kitty", ".config/neofetch", ".config/menus", ".config/nix", ".config/qBittorrent",
+        ".config/where.toml", ".fleet", ".gitconfig", ".kartik", ".mplayer", ".ssh/config", ".ssh/authorized_keys",
+        ".ssh/known_hosts", ".tcshrc", ".unish", ".viminfo", ".wget-hsts", ".xonshrc", ".zprofile", ".zshenv", ".zshrc",
+        ".profile", ".hushlogin", "Library/Preferences", ".gitignore"
+    ],
+    "/Users/raindrops/Library/Application Support": [
+        "please", "genitalia", "ninjamuffin99", "Marehood", "kartik", "Ableton", "Adobe", "CleanMyMac X", "CleanShot",
+        "CrashReporter", "Dolby", "Foxperson", "Godot", "Gemini 2", "i2p", "Insomnia", "iTerm2", "JetBrains", "ngrok",
+        "ntfy", "nushell", "org.videolan.vlc", "ovh.pwai.marehood", "obs-studio", "pingus", "qBittorrent", "Vencord"
+    ]
+}
+
+
+def do_sync():
+    global tracked
+    subprocess.run(["git", "fetch", "--all"])
+
+    try:
+        subprocess.run(["git", "pull", "origin", "master"])
+    except Exception as e:
+        print(e)
+
+    print("Syncing " + os.getcwd())
+
+    for file in tracked[os.getcwd()]:
+        subprocess.run(["git", "add", file])
+
+    changelog = list(map(lambda x: " ".join(x.split(" ")[1:]),
+                         filter(lambda x: not x.startswith("?? "),
+                                subprocess
+                                .check_output(["git", "status", "-s"])
+                                .decode("utf-8")
+                                .strip()
+                                .split("\n"))))
+
+    if len(changelog) > 0:
+        subprocess.run(["git", "commit", "-m", f"hypersyncd v.{VERSION}: {getpass.getuser()}@{socket.gethostname()}"
+                                               f": syncing {os.getcwd()}"])
+        subprocess.run(["git", "push", "origin", "master", "--force"])
+
+    subprocess.run(["git", "push", "origin", "master", "--force"])
+    subprocess.run(["git", "reflog", "expire", "--expire-unreachable=now", "--all"])
+    subprocess.run(["git", "gc", "--aggressive", "--prune=all"])
+
+
+try:
+    do_sync()
+    print(f"Tracking {len(tracked)} roots")
+except Exception as e:
+    print(e)
